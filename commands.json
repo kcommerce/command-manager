@@ -1,32 +1,56 @@
 [
   {
-    "name": "List Files",
-    "command": "ls -la",
-    "description": "List all files in current directory"
+    "id": "d76631e3-e6c6-4da2-a8fb-407a31df4689",
+    "name": "Default",
+    "commands": [
+      {
+        "name": "List Files",
+        "command": "ls -la",
+        "description": "List all files in current directory",
+        "id": "bab94bd9-9812-4c21-99ad-dcf376687f1d"
+      },
+      {
+        "name": "System Info",
+        "command": "uname -a",
+        "description": "Show system information",
+        "id": "7acb7db3-34a1-49c7-9745-0e3f7e5922f5"
+      },
+      {
+        "name": "Disk Usage",
+        "command": "df -h",
+        "description": "Show disk usage",
+        "id": "73b36834-ffb6-438f-8e5e-65e889be1514"
+      },
+      {
+        "name": "Current Dir",
+        "command": "pwd",
+        "description": "Print working directory",
+        "id": "1090dfea-a90f-4481-8231-4422f8f4da75"
+      },
+      {
+        "name": "Date & Time",
+        "command": "date",
+        "description": "Show current date and time",
+        "id": "9558230e-55f8-4579-be96-70d83b50dc95"
+      },
+      {
+        "name": "Check disk",
+        "command": "df -h",
+        "description": "",
+        "id": "2c8b3bf8-e922-4c70-916a-9ac87bc89e15"
+      }
+    ]
   },
   {
-    "name": "System Info",
-    "command": "uname -a",
-    "description": "Show system information"
-  },
-  {
-    "name": "Disk Usage",
-    "command": "df -h",
-    "description": "Show disk usage"
-  },
-  {
-    "name": "Current Dir",
-    "command": "pwd",
-    "description": "Print working directory"
-  },
-  {
-    "name": "Date & Time",
-    "command": "date",
-    "description": "Show current date and time"
-  },
-  {
-    "name": "Check disk",
-    "command": "df -h",
-    "description": ""
+    "id": "fe0f6f35-a3d3-4f23-b58d-619d48d6d0d2",
+    "name": "macOS",
+    "commands": [
+      {
+        "id": "e73a2e9e-f81c-40cf-b219-3c696014af19",
+        "name": "00 List files",
+        "command": "ls -al",
+        "description": ""
+      }
+    ]
   }
 ]
