@@ -742,6 +742,7 @@ class CommandManagerApp(tk.Tk):
         )
         self.cmd_entry.pack(side="left", fill="x", expand=True, ipady=5)
         self.cmd_entry.bind("<Return>", lambda e: self._run_entry())
+        self._setup_entry_bindings(self.cmd_entry)
 
         bg, fg = t["btn_run"]
         self.w_btn_run_entry = tk.Button(self.w_entry_frame, text="> Run",
@@ -770,6 +771,7 @@ class CommandManagerApp(tk.Tk):
         )
         self.terminal.pack(side="left", fill="both", expand=True)
         self.w_t_scroll.config(command=self.terminal.yview)
+        self._setup_terminal_bindings(self.terminal)
 
         self._write_terminal("Command Manager ready.\n", "info")
         self._write_terminal("Click a command to load it, double-click to run.\n\n", "info")
@@ -779,6 +781,184 @@ class CommandManagerApp(tk.Tk):
         return dict(bg=bg, fg=fg, activebackground=bg, activeforeground=fg,
                     relief="flat", font=(t["font_mono"], 9, "bold"),
                     cursor="hand2", padx=6, pady=pady)
+
+    # ─── Copy / Paste helpers ─────────────────────────────────────────────
+
+    def _setup_entry_bindings(self, entry):
+        """Attach keyboard shortcuts and right-click context menu to an Entry widget."""
+        # On Windows tkinter doesn't always wire these automatically
+        entry.bind("<Control-a>",         lambda e: self._entry_select_all(entry))
+        entry.bind("<Control-A>",         lambda e: self._entry_select_all(entry))
+        entry.bind("<Control-c>",         lambda e: self._entry_copy(entry))
+        entry.bind("<Control-C>",         lambda e: self._entry_copy(entry))
+        entry.bind("<Control-x>",         lambda e: self._entry_cut(entry))
+        entry.bind("<Control-X>",         lambda e: self._entry_cut(entry))
+        entry.bind("<Control-v>",         lambda e: self._entry_paste(entry))
+        entry.bind("<Control-V>",         lambda e: self._entry_paste(entry))
+        entry.bind("<Control-z>",         lambda e: self._entry_undo(entry))
+        entry.bind("<Control-Z>",         lambda e: self._entry_undo(entry))
+        # macOS uses Command (Meta)
+        entry.bind("<Command-a>",         lambda e: self._entry_select_all(entry))
+        entry.bind("<Command-c>",         lambda e: self._entry_copy(entry))
+        entry.bind("<Command-x>",         lambda e: self._entry_cut(entry))
+        entry.bind("<Command-v>",         lambda e: self._entry_paste(entry))
+        entry.bind("<Command-z>",         lambda e: self._entry_undo(entry))
+        # Right-click context menu
+        entry.bind("<Button-3>",          lambda e: self._show_entry_menu(e, entry))
+        entry.bind("<Control-Button-1>",  lambda e: self._show_entry_menu(e, entry))  # macOS Ctrl+click
+
+    def _setup_terminal_bindings(self, text_widget):
+        """Attach right-click context menu and copy shortcut to the read-only terminal."""
+        text_widget.bind("<Button-3>",         lambda e: self._show_terminal_menu(e, text_widget))
+        text_widget.bind("<Control-Button-1>", lambda e: self._show_terminal_menu(e, text_widget))
+        # Allow Ctrl+C / Cmd+C to copy selected text from the terminal
+        text_widget.bind("<Control-c>",  lambda e: self._terminal_copy(text_widget))
+        text_widget.bind("<Control-C>",  lambda e: self._terminal_copy(text_widget))
+        text_widget.bind("<Command-c>",  lambda e: self._terminal_copy(text_widget))
+        text_widget.bind("<Control-a>",  lambda e: self._terminal_select_all(text_widget))
+        text_widget.bind("<Control-A>",  lambda e: self._terminal_select_all(text_widget))
+        text_widget.bind("<Command-a>",  lambda e: self._terminal_select_all(text_widget))
+
+    # Entry actions
+    def _entry_select_all(self, entry):
+        entry.select_range(0, "end")
+        entry.icursor("end")
+        return "break"
+
+    def _entry_copy(self, entry):
+        try:
+            text = entry.selection_get()
+            self.clipboard_clear()
+            self.clipboard_append(text)
+        except tk.TclError:
+            pass
+        return "break"
+
+    def _entry_cut(self, entry):
+        try:
+            text = entry.selection_get()
+            self.clipboard_clear()
+            self.clipboard_append(text)
+            entry.delete(tk.SEL_FIRST, tk.SEL_LAST)
+        except tk.TclError:
+            pass
+        return "break"
+
+    def _entry_paste(self, entry):
+        try:
+            text = self.clipboard_get()
+            # Replace selection if any, otherwise insert at cursor
+            try:
+                entry.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            except tk.TclError:
+                pass
+            entry.insert(tk.INSERT, text)
+        except tk.TclError:
+            pass
+        return "break"
+
+    def _entry_undo(self, entry):
+        try:
+            entry.event_generate("<<Undo>>")
+        except tk.TclError:
+            pass
+        return "break"
+
+    def _copy_to_entry(self, entry):
+        """Copy terminal selection into the command entry bar."""
+        try:
+            text = self.terminal.get(tk.SEL_FIRST, tk.SEL_LAST).strip()
+            if text:
+                entry.delete(0, "end")
+                entry.insert(0, text)
+                entry.icursor("end")
+                entry.focus_set()
+        except tk.TclError:
+            pass
+
+    # Terminal actions
+    def _terminal_copy(self, text_widget):
+        try:
+            text = text_widget.get(tk.SEL_FIRST, tk.SEL_LAST)
+            self.clipboard_clear()
+            self.clipboard_append(text)
+        except tk.TclError:
+            pass
+        return "break"
+
+    def _terminal_select_all(self, text_widget):
+        text_widget.tag_add(tk.SEL, "1.0", "end")
+        return "break"
+
+    # Context menus
+    def _show_entry_menu(self, event, entry):
+        t  = self.theme
+        fm = t["font_mono"]
+        menu = tk.Menu(self, tearoff=0,
+                       bg=t["bg_left"], fg=t["fg_tree"],
+                       activebackground=t["fg_select_bg"],
+                       activeforeground=t["fg_select_fg"],
+                       font=(fm, 9))
+
+        has_sel = False
+        try:
+            entry.selection_get()
+            has_sel = True
+        except tk.TclError:
+            pass
+
+        has_clip = False
+        try:
+            has_clip = bool(self.clipboard_get())
+        except tk.TclError:
+            pass
+
+        menu.add_command(label="Cut",        command=lambda: self._entry_cut(entry),
+                         state="normal" if has_sel else "disabled")
+        menu.add_command(label="Copy",       command=lambda: self._entry_copy(entry),
+                         state="normal" if has_sel else "disabled")
+        menu.add_command(label="Paste",      command=lambda: self._entry_paste(entry),
+                         state="normal" if has_clip else "disabled")
+        menu.add_separator()
+        menu.add_command(label="Select All", command=lambda: self._entry_select_all(entry))
+        menu.add_separator()
+        menu.add_command(label="Clear",      command=lambda: entry.delete(0, "end"))
+
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _show_terminal_menu(self, event, text_widget):
+        t  = self.theme
+        fm = t["font_mono"]
+        menu = tk.Menu(self, tearoff=0,
+                       bg=t["bg_left"], fg=t["fg_tree"],
+                       activebackground=t["fg_select_bg"],
+                       activeforeground=t["fg_select_fg"],
+                       font=(fm, 9))
+
+        has_sel = False
+        try:
+            text_widget.get(tk.SEL_FIRST, tk.SEL_LAST)
+            has_sel = True
+        except tk.TclError:
+            pass
+
+        menu.add_command(label="Copy",              command=lambda: self._terminal_copy(text_widget),
+                         state="normal" if has_sel else "disabled")
+        menu.add_command(label="Copy to Entry Bar", command=lambda: self._copy_to_entry(self.cmd_entry),
+                         state="normal" if has_sel else "disabled")
+        menu.add_separator()
+        menu.add_command(label="Select All",        command=lambda: self._terminal_select_all(text_widget))
+        menu.add_separator()
+        menu.add_command(label="Clear Terminal",    command=self._clear_terminal)
+        menu.add_command(label="Save Output...",    command=self._save_output)
+
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
 
     # ─── Tree ─────────────────────────────────────────────────────────────
 
