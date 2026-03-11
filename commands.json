@@ -1,0 +1,32 @@
+[
+  {
+    "name": "List Files",
+    "command": "ls -la",
+    "description": "List all files in current directory"
+  },
+  {
+    "name": "System Info",
+    "command": "uname -a",
+    "description": "Show system information"
+  },
+  {
+    "name": "Disk Usage",
+    "command": "df -h",
+    "description": "Show disk usage"
+  },
+  {
+    "name": "Current Dir",
+    "command": "pwd",
+    "description": "Print working directory"
+  },
+  {
+    "name": "Date & Time",
+    "command": "date",
+    "description": "Show current date and time"
+  },
+  {
+    "name": "Check disk",
+    "command": "df -h",
+    "description": ""
+  }
+]
