@@ -50,6 +50,8 @@ jobs:
 
       # ── 5. Build ───────────────────────────────────────────────────────────
       - name: Build executable
+        env:
+          PYTHONUTF8: "1"        # force UTF-8 stdout on Windows (avoids cp1252 errors)
         run: python build.py --onefile --clean
 
       # ── 6. Rename artifact for upload ─────────────────────────────────────

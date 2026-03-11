@@ -20,6 +20,12 @@ import shutil
 import argparse
 import subprocess
 import platform
+import io
+
+# Force UTF-8 output on Windows (cp1252 cannot encode unicode symbols)
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -203,7 +209,7 @@ def main() -> None:
 
     system = platform.system()   # 'Darwin' | 'Windows' | 'Linux'
 
-    print(f"\n⚡ Command Manager — Build Script")
+    print(f"\n[**] Command Manager -- Build Script")
     print(f"   Platform : {system} {platform.machine()}")
     print(f"   Python   : {sys.version.split()[0]}")
     print(f"   Mode     : {'single-file' if args.onefile else 'directory bundle'}")
