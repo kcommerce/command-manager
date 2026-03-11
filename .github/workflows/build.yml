@@ -62,7 +62,7 @@ jobs:
       - name: Rename artifact (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Rename-Item dist\CommandManager.exe dist\${{ matrix.artifact_name }}.exe
+        run: Rename-Item -Path dist\CommandManager.exe -NewName CommandManager-Windows.exe
 
       # ── 7. Upload build artifact (available in Actions UI) ─────────────────
       - name: Upload build artifact
