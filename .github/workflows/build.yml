@@ -3,58 +3,72 @@ name: Build Command Manager
 on:
   push:
     tags:
-      - "v*"          # trigger on version tags: v1.0.0, v1.2.3, etc.
-  workflow_dispatch:  # allow manual trigger from GitHub UI
+      - "v*"
+  workflow_dispatch:
 
 permissions:
-  contents: write     # needed to create GitHub Releases and upload assets
+  contents: write
 
 jobs:
   build:
-    name: Build — ${{ matrix.os }}
+    name: Build — ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
-            artifact_name: CommandManager-macOS
-            asset_ext: ""                      # single binary, no extension
-          - os: windows-latest
+          # ── macOS (Apple Silicon ARM64) ───────────────────────────────
+          - name: macOS-ARM64
+            os: macos-latest
+            artifact_name: CommandManager-macOS-ARM64
+            asset_ext: ""
+          
+          # ── macOS (Intel x86_64) ──────────────────────────────────────
+          - name: macOS-Intel
+            os: macos-13
+            artifact_name: CommandManager-macOS-Intel
+            asset_ext: ""
+
+          # ── Windows ───────────────────────────────────────────────────
+          - name: Windows
+            os: windows-latest
             artifact_name: CommandManager-Windows
             asset_ext: ".exe"
-          - os: ubuntu-latest
+
+          # ── Linux ─────────────────────────────────────────────────────
+          - name: Linux
+            os: ubuntu-latest
             artifact_name: CommandManager-Linux
             asset_ext: ""
 
     steps:
-      # ── 1. Checkout ────────────────────────────────────────────────────────
+      # ── 1. Checkout ───────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Python ──────────────────────────────────────────────────────────
+      # ── 2. Python ─────────────────────────────────────────────────────
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # ── 3. Linux — install Tkinter system package ──────────────────────────
+      # ── 3. Linux — install Tkinter ────────────────────────────────────
       - name: Install Tkinter (Linux only)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y python3-tk
 
-      # ── 4. Install PyInstaller ─────────────────────────────────────────────
+      # ── 4. Install PyInstaller ────────────────────────────────────────
       - name: Install PyInstaller
         run: pip install pyinstaller
 
-      # ── 5. Build ───────────────────────────────────────────────────────────
+      # ── 5. Build ──────────────────────────────────────────────────────
       - name: Build executable
         env:
-          PYTHONUTF8: "1"        # force UTF-8 stdout on Windows (avoids cp1252 errors)
+          PYTHONUTF8: "1"
         run: python build.py --onefile --clean
 
-      # ── 6. Rename artifact for upload ─────────────────────────────────────
+      # ── 6. Rename artifact ────────────────────────────────────────────
       - name: Rename artifact (macOS / Linux)
         if: runner.os != 'Windows'
         run: mv dist/CommandManager dist/${{ matrix.artifact_name }}
@@ -64,19 +78,18 @@ jobs:
         shell: pwsh
         run: Rename-Item -Path dist\CommandManager.exe -NewName CommandManager-Windows.exe
 
-      # ── 7. Upload build artifact (available in Actions UI) ─────────────────
+      # ── 7. Upload artifact ────────────────────────────────────────────
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/${{ matrix.artifact_name }}${{ matrix.asset_ext }}
 
-  # ── Release job — runs after all builds succeed ───────────────────────────
   release:
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')   # only on tag pushes
+    if: startsWith(github.ref, 'refs/tags/')
 
     steps:
       - name: Download all artifacts
@@ -94,16 +107,19 @@ jobs:
             ### Downloads
             | Platform | File |
             |---|---|
-            | 🍎 macOS | `CommandManager-macOS` |
+            | 🍎 macOS (ARM64 / M1+) | `CommandManager-macOS-ARM64` |
+            | 🍎 macOS (Intel) | `CommandManager-macOS-Intel` |
             | 🪟 Windows | `CommandManager-Windows.exe` |
             | 🐧 Linux | `CommandManager-Linux` |
 
             ### First run
-            **macOS:** `chmod +x CommandManager-macOS && ./CommandManager-macOS`
-            **Linux:** `chmod +x CommandManager-Linux && ./CommandManager-Linux`
+            **macOS (ARM64):** `chmod +x CommandManager-macOS-ARM64 && ./CommandManager-macOS-ARM64`  
+            **macOS (Intel):** `chmod +x CommandManager-macOS-Intel && ./CommandManager-macOS-Intel`  
+            **Linux:** `chmod +x CommandManager-Linux && ./CommandManager-Linux`  
             **Windows:** double-click `CommandManager-Windows.exe`
           files: |
-            release-assets/CommandManager-macOS/CommandManager-macOS
+            release-assets/CommandManager-macOS-ARM64/CommandManager-macOS-ARM64
+            release-assets/CommandManager-macOS-Intel/CommandManager-macOS-Intel
             release-assets/CommandManager-Windows/CommandManager-Windows.exe
             release-assets/CommandManager-Linux/CommandManager-Linux
           draft: false
