@@ -12,7 +12,7 @@ permissions:
 jobs:
   build:
     name: Build — ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
 
     strategy:
       fail-fast: false
@@ -20,55 +20,49 @@ jobs:
         include:
           # ── macOS (Apple Silicon ARM64) ───────────────────────────────
           - name: macOS-ARM64
-            os: macos-latest
+            runner: macos-latest
             artifact_name: CommandManager-macOS-ARM64
             asset_ext: ""
-          
-          # ── macOS (Intel x86_64) ──────────────────────────────────────
+
+          # ── macOS (Intel x86_64) → SELF-HOSTED ────────────────────────
           - name: macOS-Intel
-            os: macos-13
+            runner: [self-hosted, macOS, X64]
             artifact_name: CommandManager-macOS-Intel
             asset_ext: ""
 
           # ── Windows ───────────────────────────────────────────────────
           - name: Windows
-            os: windows-latest
+            runner: windows-latest
             artifact_name: CommandManager-Windows
             asset_ext: ".exe"
 
           # ── Linux ─────────────────────────────────────────────────────
           - name: Linux
-            os: ubuntu-latest
+            runner: ubuntu-latest
             artifact_name: CommandManager-Linux
             asset_ext: ""
 
     steps:
-      # ── 1. Checkout ───────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── 2. Python ─────────────────────────────────────────────────────
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # ── 3. Linux — install Tkinter ────────────────────────────────────
       - name: Install Tkinter (Linux only)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y python3-tk
 
-      # ── 4. Install PyInstaller ────────────────────────────────────────
       - name: Install PyInstaller
         run: pip install pyinstaller
 
-      # ── 5. Build ──────────────────────────────────────────────────────
       - name: Build executable
         env:
           PYTHONUTF8: "1"
         run: python build.py --onefile --clean
 
-      # ── 6. Rename artifact ────────────────────────────────────────────
       - name: Rename artifact (macOS / Linux)
         if: runner.os != 'Windows'
         run: mv dist/CommandManager dist/${{ matrix.artifact_name }}
@@ -78,7 +72,6 @@ jobs:
         shell: pwsh
         run: Rename-Item -Path dist\CommandManager.exe -NewName CommandManager-Windows.exe
 
-      # ── 7. Upload artifact ────────────────────────────────────────────
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
